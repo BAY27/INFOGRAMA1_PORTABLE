@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UIDH: Defensa Estratégica de Recursos Hidrocarburíferos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet.js para el mapa -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Font Awesome para Iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    
+    <!-- 
+    Plan de Narrativa y Estructura (v12 - Coordenadas Corregidas):
+    1.  Introducción: Sin cambios.
+    2.  Diagnóstico de la Amenaza: Sin cambios.
+    3.  Mapa de Puntos Críticos: Actualizado con la lista completa de coordenadas de todos los poliductos proporcionados. Se corrigió el formato y la lógica de ploteo para una correcta visualización.
+    4.  Modus Operandi y Estructura Criminal: Se mantiene el diagrama con iconografía.
+    5.  Modelo de Gestión UIDH: Sin cambios.
+    6.  Respuesta y Productividad: Sin cambios.
+    7.  Nudos Críticos: Sin cambios.
+    8.  Hoja de Ruta Estratégica: Sin cambios.
+
+    Confirmación: Ni Mermaid JS ni SVG fueron utilizados en la generación de este documento. Toda la visualización se realiza mediante Chart.js (Canvas), HTML/CSS con Tailwind y Leaflet.js.
+    -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            color: #1f2937;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .kpi-card {
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: all 0.3s ease-in-out;
+        }
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .kpi-number {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #004AAD;
+        }
+        .kpi-label {
+            font-size: 1rem;
+            color: #4A5568;
+            margin-top: 0.5rem;
+        }
+        .flow-step {
+            background-color: white;
+            border: 2px solid #8AB8FF;
+        }
+        .flow-arrow {
+            color: #0062E3;
+        }
+        .modus-card {
+            background-color: white;
+            border-left: 4px solid;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        #mapaEcuador {
+            height: 500px;
+            width: 100%;
+            border-radius: 0.75rem;
+            z-index: 0;
+        }
+        .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+            background: #ffffff;
+            color: #1f2937;
+        }
+        .map-legend {
+            padding: 6px 8px;
+            font: 12px Arial, Helvetica, sans-serif;
+            background: white;
+            background: rgba(255,255,255,0.8);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+            line-height: 18px;
+            color: #555;
+        }
+        .map-legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.9;
+            border-radius: 50%;
+            border: 1px solid #333;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Barra superior que se oculta al hacer scroll -->
+    <div class="bg-gradient-to-r from-[#0047A0] via-[#004AAD] to-[#003D91] text-white shadow-md">
+        <div class="container mx-auto px-4 py-3 flex justify-center items-center border-b border-blue-300">
+            <div class="flex items-center justify-center gap-6">
+                <div class="bg-white p-1 rounded-full shadow-md" style="height: 48px; width: 48px; overflow: hidden;">
+                    <img src="sello_ecuador.jpg" alt="Sello Ecuador" class="w-full h-full object-contain">
+                </div>
+                <span class="text-2xl font-bold">REPÚBLICA DEL ECUADOR</span>
+                <div class="bg-white p-1 rounded-full shadow-md" style="height: 48px; width: 48px; overflow: hidden;">
+                    <img src="sello_ecuador.jpg" alt="Sello Ecuador" class="w-full h-full object-contain">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Encabezado principal que permanece fijo al hacer scroll -->
+    <header class="bg-gradient-to-r from-[#0047A0] via-[#004AAD] to-[#003D91] text-white shadow-lg sticky top-0 z-20">
+        <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center gap-4 mb-3 md:mb-0">
+                <div class="bg-white p-1 rounded-full shadow-md" style="height: 55px; width: 55px; overflow: hidden;">
+                    <img src="SELLOUIDH.jpg" alt="Sello UIDH" class="w-full h-full object-contain">
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold">UIDH: ANÁLISIS ESTRATÉGICO 2025</h1>
+                    <p class="text-sm text-blue-100">Policía Nacional del Ecuador</p>
+                </div>
+            </div>
+            <div class="text-center md:text-right">
+                <p class="font-semibold text-lg">Unidad Nacional de Investigación</p>
+                <p class="font-semibold text-lg">de Delitos Hidrocarburíferos</p>
+                <p class="text-sm text-blue-100">Tcnl. Leonidas Ismael Varas Rojas</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8">
+
+        <section id="intro" class="text-center my-12">
+            <h2 class="text-4xl font-bold text-[#004AAD] mb-4">Defendiendo los Recursos Estratégicos del Ecuador</h2>
+            <p class="max-w-3xl mx-auto text-lg text-gray-700">
+                El delito hidrocarburífero ha escalado de un ilícito común a una compleja economía criminal que amenaza la seguridad hidrocarburífera y económica del país. La UIDH se encuentra en la primera línea de defensa, combatiendo una amenaza transnacional con acciones investigativas, estrategias y resultados contundentes.
+            </p>
+        </section>
+
+        <section id="amenaza" class="mb-12">
+             <div class="bg-white rounded-lg shadow-md p-6 bg-gradient-to-br from-white to-blue-50">
+                <h3 class="text-2xl font-bold text-center mb-4"><i class="fas fa-triangle-exclamation text-red-500 mr-2"></i>Diagnóstico de la Amenaza: Una Problemática Exponencial</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg mb-4" role="alert">
+                            <p class="font-bold">Crecimiento Alarmante</p>
+                            <p>Las perforaciones clandestinas continúan en una tendencia ascendente, superando los 479 casos a mayo de 2025 y con una proyección de más de 1000 para fin de año.</p>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-number text-red-600">+$134M</div>
+                            <div class="kpi-label">Pérdida estimada en 2024 (Volumen sustraído + Reparación)</div>
+                        </div>
+                         <p class="mt-4 text-sm text-center text-gray-600">Este delito financia directamente al narcotráfico (GAOR E-48, Frente 48, Comandos de fronteras), minería ilegal, lavado de activos y delitos transnacionales, consolidando el poder de GDOs como Los Choneros, Lobos y Fatales.</p>
+                    </div>
+                    <div>
+                        <div class="chart-container h-[300px] md:h-[400px]">
+                            <canvas id="perforacionesChart"></canvas>
+                        </div>
+                        <p class="text-center font-semibold mt-2">Evolución de Perforaciones Clandestinas (2020-2025*)</p>
+                        <p class="text-center text-xs text-gray-500">*Dato 2025 con corte a 27 de mayo.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="heatmap" class="mb-12">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                 <h3 class="text-2xl font-bold text-center mb-6 flex items-center justify-center gap-2">
+                    <i class="fas fa-map-marked-alt text-red-600"></i>
+                    Puntos Críticos Geográficos y Coordenadas de Perforaciones
+                </h3>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="font-bold text-lg text-center mb-2">Mapa de Incidentes 2025</h4>
+                        <p class="text-center text-sm text-gray-600 mb-4">Ubicación exacta de las perforaciones clandestinas reportadas. Cada punto representa un evento que ha requerido intervención de la UIDH.</p>
+                        <div id="mapaEcuador" class="rounded-lg shadow-inner"></div>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-lg text-center mb-2">Poliductos más Afectados (Ene-May 2025)</h4>
+                         <p class="text-center text-sm text-gray-600 mb-4">Ciertos tramos de la red de poliductos son objetivos recurrentes de las estructuras criminales.</p>
+                        <div class="chart-container h-[460px]">
+                            <canvas id="poliductosChart2025"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="modus-operandi" class="mb-12">
+            <h3 class="text-2xl font-bold text-center mb-6"><i class="fas fa-sitemap text-[#004AAD] mr-2"></i>Modus Operandi: La Estructura del Crimen</h3>
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex flex-col md:flex-row gap-8">
+                    <div class="flex-1">
+                        <h4 class="font-bold text-lg mb-4 text-[#004AAD]">Proceso de Sustracción y Destino</h4>
+                        <div class="space-y-4">
+                            <div class="modus-card border-[#0062E3] flex items-start gap-4"><i class="fas fa-satellite-dish text-xl text-[#0062E3] mt-1"></i><div><span class="font-bold">1. Fuga de Información:</span> Técnicos informan sobre tipo de combustible y presión.</div></div>
+                            <div class="flex justify-center"><div class="flow-arrow text-2xl font-bold">↓</div></div>
+                            <div class="modus-card border-[#0062E3] flex items-start gap-4"><i class="fas fa-tools text-xl text-[#0062E3] mt-1"></i><div><span class="font-bold">2. Perforación (Pinchazo):</span> Equipos especializados perforan el poliducto con acoples.</div></div>
+                            <div class="flex justify-center"><div class="flow-arrow text-2xl font-bold">↓</div></div>
+                            <div class="modus-card border-[#0062E3] flex items-start gap-4"><i class="fas fa-truck-moving text-xl text-[#0062E3] mt-1"></i><div><span class="font-bold">3. Extracción y Transporte:</span> Se usan autotanques y camiones para sustraer y transportar el producto con guías falsas.</div></div>
+                            <div class="flex justify-center"><div class="flow-arrow text-2xl font-bold">↓</div></div>
+                            <div class="modus-card border-[#E53E3E]">
+                                <p class="font-bold flex items-center gap-2"><i class="fas fa-crosshairs text-xl text-[#E53E3E]"></i>4. Destino Final del Ilícito:</p>
+                                <div class="grid grid-cols-2 gap-2 text-sm mt-3">
+                                    <div class="flex items-center gap-2"><i class="fas fa-capsules text-red-500"></i><span>Narcotráfico</span></div>
+                                    <div class="flex items-center gap-2"><i class="fas fa-gem text-yellow-500"></i><span>Minería Ilegal</span></div>
+                                    <div class="flex items-center gap-2"><i class="fas fa-industry text-gray-500"></i><span>Consumo Interno</span></div>
+                                    <div class="flex items-center gap-2"><i class="fas fa-dolly text-blue-500"></i><span>Contrabando</span></div>
+                                    <div class="flex items-center gap-2"><i class="fas fa-fish text-cyan-500"></i><span>Pesca Ilegal</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Divisor con fondo color rojo agua -->
+                    <div class="hidden md:block w-1 bg-gradient-to-b from-red-200 via-red-300 to-red-200 rounded-full mx-4 opacity-80"></div>
+                    
+                    <div class="flex-1 mt-8 md:mt-0">
+                        <h4 class="font-bold text-lg mb-4 text-[#004AAD]">Estructura de la Organización Delictiva</h4>
+                         <div class="space-y-4">
+                            <div class="modus-card border-gray-700 flex items-start gap-4"><i class="fas fa-crown text-xl text-yellow-500 mt-1"></i><div><p class="font-bold">Cúpula: Líder de la Organización</p><p class="text-sm">Coordina operaciones y mantiene conexiones para garantizar impunidad.</p></div></div>
+                             <div class="grid grid-cols-2 gap-4">
+                                <div class="modus-card border-gray-600 flex items-start gap-2"><i class="fas fa-hand-holding-dollar text-green-500 mt-1"></i><div><p class="font-bold">Financiero</p><p class="text-sm">Lava los activos.</p></div></div>
+                                <div class="modus-card border-gray-600 flex items-start gap-2"><i class="fas fa-cogs text-blue-500 mt-1"></i><div><p class="font-bold">Logístico</p><p class="text-sm">Adquiere vehículos y terrenos.</p></div></div>
+                            </div>
+                            <div class="modus-card border-gray-500 flex items-start gap-4"><i class="fas fa-user-hard-hat text-xl text-gray-500 mt-1"></i><div><p class="font-bold">Operativos: Conductores y Seguridad</p><p class="text-sm">Ejecutan el transporte y brindan protección armada.</p></div></div>
+                             <div class="modus-card border-red-500 flex items-start gap-4"><i class="fas fa-skull-crossbones text-xl text-red-500 mt-1"></i><div><p class="font-bold">Células Criminales (GDOs)</p><p class="text-sm">R7, Fatales, Mafia, Lobos, Choneros, etc. Ejecutan la violencia y el control territorial.</p></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="gestion-uidh" class="mb-12">
+            <h3 class="text-2xl font-bold text-center mb-6"><i class="fas fa-user-secret text-[#004AAD] mr-2"></i>Modelo de Gestión UIDH: ¿Cómo Trabajamos?</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                 <div class="kpi-card text-left h-full">
+                    <h4 class="font-bold text-lg text-[#004AAD] mb-2">Investigación en Delitos Flagrantes</h4>
+                    <p class="text-sm text-gray-600">Actuación inmediata ante alertas del ECU-911 o denuncias ciudadanas. Se enfoca en la aprehensión de los implicados y el aseguramiento de evidencias en el momento del ilícito, como perforaciones activas o transporte ilegal.</p>
+                </div>
+                 <div class="kpi-card text-left h-full">
+                    <h4 class="font-bold text-lg text-[#004AAD] mb-2">Investigación por Disposición Fiscal</h4>
+                    <p class="text-sm text-gray-600">Ejecución de diligencias específicas ordenadas por la Fiscalía, como reconocimientos del lugar, recolección de pruebas, entrevistas y análisis técnicos para construir casos sólidos contra las redes criminales.</p>
+                </div>
+                 <div class="kpi-card text-left h-full">
+                    <h4 class="font-bold text-lg text-[#004AAD] mb-2">Análisis e Inteligencia Procesada</h4>
+                    <p class="text-sm text-gray-600">Análisis profundo y estructurado de información proveniente de múltiples fuentes (EP Petroecuador, ARCH, Fiscalía) para identificar patrones, desmantelar redes delictivas completas y anticipar futuros ilícitos.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="productividad" class="mb-12">
+             <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-2xl font-bold text-center mb-6"><i class="fas fa-chart-line text-green-500 mr-2"></i>Productividad Comparativa 2024 - 2025</h3>
+                <p class="text-center text-gray-600 max-w-3xl mx-auto mb-8">Los datos del primer semestre de 2025 reflejan un incremento significativo en la actividad operativa y en los resultados de incautaciones, demostrando una mayor presión sobre las estructuras criminales.</p>
+                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                     <div class="chart-container h-64"><canvas id="detenidosChart"></canvas></div>
+                     <div class="chart-container h-64"><canvas id="organizacionesChart"></canvas></div>
+                     <div class="chart-container h-64"><canvas id="carrosChart"></canvas></div>
+                     <div class="chart-container h-64"><canvas id="casosChart"></canvas></div>
+                     <div class="chart-container h-64"><canvas id="combustibleChart"></canvas></div>
+                     <div class="chart-container h-64"><canvas id="glpChart"></canvas></div>
+                 </div>
+            </div>
+        </section>
+        
+        <section id="desafios" class="mb-12">
+            <h3 class="text-2xl font-bold text-center mb-8"><i class="fas fa-magnifying-glass-chart text-orange-500 mr-2"></i>Nudos Críticos: Recursos</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h4 class="font-bold text-lg text-center mb-4">Déficit de Talento Humano</h4>
+                     <p class="text-sm text-center text-gray-600 mb-4">La capacidad operativa está limitada por una brecha significativa entre el personal disponible y el requerido para una cobertura nacional efectiva.</p>
+                    <div class="chart-container h-80"><canvas id="personalChart"></canvas></div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                     <h4 class="font-bold text-lg text-center mb-4">Déficit Logístico</h4>
+                     <p class="text-sm text-center text-gray-600 mb-4">El parque automotor es insuficiente y en su mayoría obsoleto (modelos 2009), afectando la movilidad y capacidad de respuesta.</p>
+                    <div class="chart-container h-80"><canvas id="logisticaChart"></canvas></div>
+                </div>
+            </div>
+             <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-orange-100 border-l-4 border-orange-500 text-orange-800 p-4 rounded-lg">
+                    <h4 class="font-bold">Obstáculos Legales y Procesales</h4>
+                    <p class="mt-2 text-sm">Falta de espacios físicos como centros de acopio temporales para indicios y evidencias en delitos hidrocarburíferos, dificultan la judicialización por estos delitos. De 375 detenidos en 2024, solo 30 recibieron prisión preventiva. La Sentencia 66-15-JC/19 sobre el almacenamiento de evidencias crea demoras críticas.</p>
+                </div>
+                <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-800 p-4 rounded-lg">
+                    <h4 class="font-bold">Vulnerabilidad de Infraestructura</h4>
+                    <p class="mt-2 text-sm">La solicitud de EP PETROECUADOR para resguardar 294 puestos evidencia una brecha en la protección física que debe ser cubierta de forma interinstitucional y urgente.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="hoja-de-ruta">
+            <h3 class="text-2xl font-bold text-center mb-8"><i class="fas fa-route text-[#004AAD] mr-2"></i>Hoja de Ruta Estratégica: Propuestas para la Acción</h3>
+            <div class="space-y-4 max-w-4xl mx-auto">
+                 <div class="flow-step p-4 rounded-lg flex items-center space-x-4">
+                    <div class="bg-[#004AAD] text-white rounded-full h-10 w-10 flex items-center justify-center font-bold text-xl">1</div>
+                    <div>
+                        <h4 class="font-bold text-lg">Fortalecimiento de Capacidades</h4>
+                        <p class="text-sm text-gray-600">Asignar los recursos necesarios para cubrir el déficit de 63 agentes y 28 vehículos. Implementar el Grupo Móvil Investigativo Contra Perforaciones (GMI).</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-center"><div class="flow-arrow text-2xl font-bold">↓</div></div>
+                
+                <div class="flow-step p-4 rounded-lg flex items-center space-x-4">
+                     <div class="bg-[#004AAD] text-white rounded-full h-10 w-10 flex items-center justify-center font-bold text-xl">2</div>
+                    <div>
+                        <h4 class="font-bold text-lg">Declaratoria de Zona de Seguridad</h4>
+                        <p class="text-sm text-gray-600">Acelerar la declaratoria de la Red Nacional de Poliductos como Zona de Seguridad para permitir un control militar y policial permanente.</p>
+                    </div>
+                </div>
+                
+                 <div class="flex justify-center"><div class="flow-arrow text-3xl font-bold">↓</div></div>
+                
+                 <div class="flow-step p-4 rounded-lg flex items-center space-x-4">
+                     <div class="bg-[#004AAD] text-white rounded-full h-10 w-10 flex items-center justify-center font-bold text-xl">3</div>
+                    <div>
+                        <h4 class="font-bold text-lg">Creación del Centro Integrado de Monitoreo (CIM)</h4>
+                        <p class="text-sm text-gray-600">Liderar la creación de un centro que integre vigilancia tecnológica y humana en tiempo real para pasar a un modelo predictivo.</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-center"><div class="flow-arrow text-3xl font-bold">↓</div></div>
+
+                <div class="flow-step p-4 rounded-lg flex items-center space-x-4">
+                     <div class="bg-[#004AAD] text-white rounded-full h-10 w-10 flex items-center justify-center font-bold text-xl">4</div>
+                    <div>
+                        <h4 class="font-bold text-lg">Impulso a Reformas Legales y Protocolo</h4>
+                        <p class="text-sm text-gray-600">Aportar insumo técnico para reformar y solucionar el nudo crítico de la Sentencia 66-15-JC/19. Diligenciar el protocolo de manejo de indicios y evidencias de hidrocarburos.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-[#004AAD] text-white mt-12">
+        <div class="container mx-auto px-6 py-4 text-center">
+            <p>&copy; 2025 Policía Nacional del Ecuador - UIDH. Todos los derechos reservados.</p>
+            <p class="text-xs text-blue-200">Protegiendo la soberanía y los recursos estratégicos del país.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const tooltipCallback = {
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                const item = tooltipItems[0];
+                                let label = item.chart.data.labels[item.dataIndex];
+                                if (Array.isArray(label)) {
+                                  return label.join(' ');
+                                } else {
+                                  return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            
+            const wrapLabel = (str, maxWidth) => {
+                if (!str || typeof str !== 'string') return '';
+                if (str.length <= maxWidth) return str;
+                const words = str.split(' ');
+                let lines = [];
+                let currentLine = '';
+                for (const word of words) {
+                    if ((currentLine + ' ' + word).trim().length > maxWidth && currentLine.length > 0) {
+                        lines.push(currentLine);
+                        currentLine = word;
+                    } else {
+                        currentLine = (currentLine + ' ' + word).trim();
+                    }
+                }
+                if (currentLine.length > 0) lines.push(currentLine);
+                return lines;
+            };
+
+            const colors = {
+                blue1: '#004AAD', blue2: '#0062E3', blue3: '#418CFF', blue4: '#8AB8FF',
+                red: '#E53E3E', green: '#38A169', yellow: '#FBBF24',
+                poliducto: {
+                    "LIBERTAD-PASCUALES": '#DD6B20', // orange
+                    "ESMERALDAS-SANTO DOMINGO-QUITO": '#ED64A6', // pink
+                    "SHUSHUFINDI-QUITO": '#9F7AEA', // purple
+                    "DEFAULT": "#718096" // gray
+                }
+            };
+
+            new Chart(document.getElementById('perforacionesChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['2020', '2021', '2022', '2023', '2024', '2025*'],
+                    datasets: [{
+                        label: 'Perforaciones Clandestinas', data: [5, 41, 334, 998, 479],
+                        borderColor: colors.red, backgroundColor: 'rgba(229, 62, 62, 0.1)',
+                        borderWidth: 2, tension: 0.4, fill: true,
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, ...tooltipCallback, scales: { y: { beginAtZero: true, title: { display: true, text: 'Número de Perforaciones' } } } }
+            });
+            
+            const mapa = L.map('mapaEcuador').setView([-1.8312, -78.1834], 6.5);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                maxZoom: 19
+            }).addTo(mapa);
+            
+            const coordinatesData = [
+             { "y": 2.251851, "x": 80.123658, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.2333637, "x": 80.673584, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.267258, "x": 80.144029, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.24022, "x": 80.711499, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.265226, "x": 80.424232, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.265207, "x": 80.424213, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.231112, "x": 80.66205, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.29665, "x": 80.207391, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.26518, "x": 80.424284, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.246435, "x": 80.111638, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.249338, "x": 80.573052, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.274637, "x": 80.153129, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.267259, "x": 80.14403, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.265248, "x": 80.42436, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.237067, "x": 80.697947, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.250905, "x": 80.589418, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.265288, "x": 80.424111, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.246435, "x": 80.111638, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.296432, "x": 80.207105, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.265269, "x": 80.424053, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.273765, "x": 80.151482, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.296796, "x": 80.207705, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.251728, "x": 80.123605, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.249936, "x": 80.600767, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.232281, "x": 80.668074, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.270848, "x": 80.747251, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.267143, "x": 80.143985, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.249957, "x": 80.600988, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.231207, "x": 80.831832, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.233351, "x": 80.82133, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.232835, "x": 80.09431, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.275641, "x": 80.154932, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.295933, "x": 80.204863, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.246319, "x": 80.111692, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.240168, "x": 80.722445, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.291693, "x": 80.195248, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.246532, "x": 80.11547, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.2443452, "x": 80.622488, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.304225, "x": 80.312389, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.248671, "x": 80.451248, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.25177, "x": 80.123637, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.296476, "x": 80.207025, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.24027, "x": 80.72238, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.231097, "x": 80.662062, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.232386, "x": 80.668076, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.296521, "x": 80.20708, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.198913, "x": 80.041516, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.267169, "x": 80.14393, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.295713, "x": 80.205212, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.264363, "x": 80.416047, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.233456, "x": 80.825448, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.236756, "x": 80.696297, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.24649, "x": 80.111178, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.233456, "x": 80.825448, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.24982, "x": 80.568701, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.236992, "x": 80.698038, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.291275, "x": 80193925.0, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.265326, "x": 80.423977, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.24607, "x": 80111203.0, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.265266, "x": 80.423995, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.233712, "x": 80.673848, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.249684, "x": 80.585621, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.26542, "x": 80.423977, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.295423, "x": 80.204228, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.24963, "x": 80.585524, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.296408, "x": 80.206651, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.251755, "x": 80.123674, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.252908, "x": 80.125269, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.304737, "x": 80.299341, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.246575, "x": 80.111184, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.267199, "x": 80.14402, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.267173, "x": 80.144001, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.236892, "x": 80.696448, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.265559, "x": 80.423965, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.252413, "x": 80.125342, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.295885, "x": 80.204817, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2302903.0, "x": 80.310162, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.265293, "x": 80.423867, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.252453, "x": 80.125389, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.29076, "x": 80.187005, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.246575, "x": 80.111184, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.265697, "x": 80.424048, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.179213, "x": 80.819077, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.249818, "x": 80.566697, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.23674, "x": 80.69604, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.265425, "x": 80.423895, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.302526, "x": 80.309629, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.235467, "x": 80.681857, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.46352, "x": 80.108866, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.296408, "x": 80.206728, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.3265313, "x": 80.423974, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.233564, "x": 80.095319, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.236815, "x": 80.696162, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.301597, "x": 80.276928, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.265347, "x": 80.423952, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.174754, "x": 80.789243, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.305879, "x": 80.712566, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.912195, "x": 80.7191, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.17594, "x": 80.800995, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.933877, "x": 80.712641, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.48494, "x": 80.752118, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.706382, "x": 80.801099, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.331135, "x": 80.717366, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.98948, "x": 80.721777, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.229739, "x": 80.7353, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.175895, "x": 80.801047, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.369221, "x": 80.72786, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.351747, "x": 80.726295, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.305858, "x": 80.712662, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.89841, "x": 80.722165, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.428522, "x": 80.743566, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.951148, "x": 80.719815, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.775851, "x": 80.760346, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.387407, "x": 80.740072, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.36919, "x": 80.727913, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.039996, "x": 80.718945, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.912182, "x": 80.719122, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.989353, "x": 80.721869, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.07732, "x": 80.735163, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.627491, "x": 80.818455, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.928743, "x": 80.714717, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.174115, "x": 80.784782, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.174115, "x": 80.784782, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.69465, "x": 80.806738, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.229798, "x": 80.735289, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.87936, "x": 80.722097, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.198563, "x": 80.840634, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.928774, "x": 80.71483, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.172036, "x": 80.781227, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.199951, "x": 80.842197, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.026876, "x": 80.719225, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.077646, "x": 80.735074, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.912145, "x": 80.719146, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.694662, "x": 80.80683, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.931608, "x": 80.71306, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.252448, "x": 80.718543, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.252502, "x": 80.718633, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.229675, "x": 80.73534, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.946008, "x": 80.718583, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.455293, "x": 80.750653, "poliducto": "LIBERTAD-PASCUALES" },
+             {  "y": 1.252503, "x": 80.718592, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.989582, "x": 80.721833, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.087105, "x": 80.73463, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.928819, "x": 80.71476, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.485008, "x": 80.752022, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.793013, "x": 80.7542221, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.975115, "x": 80.724272, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.627595, "x": 80.818468, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.351684, "x": 80.726302, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.05437, "x": 80.724423, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.879443, "x": 80.722065, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.879418, "x": 80.722174, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.255461, "x": 80.717222, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.986108, "x": 80.722588, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.138885, "x": 80.755699, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.576038, "x": 80.803864, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.706479, "x": 80.801063, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.255413, "x": 80.717282, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 2.046496, "x": 80.722516, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.630455, "x": 80.817498, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.694732, "x": 80.806821, "poliducto": "LIBERTAD-PASCUALES" },
+             { "y": 1.087088, "x": 80.734643, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.879697, "x": 80.72202, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 2.046408, "x": 80.722572, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.086947, "x": 80.734658, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.694718, "x": 80.806906, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.485083, "x": 80.752033, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.99581, "x": 80719023.0, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.29155, "x": 80.708773, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.608, "x": 80827939.0, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 2.046485, "x": 80.722538, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.694557, "x": 80.806832, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 2.13902, "x": 80.755812, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.616085, "x": 80.826753, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 2.040107, "x": 80.718965, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 2.026706, "x": 80.719101, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1928863.0, "x": 80.714721, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.485111, "x": 80.752038, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.455139, "x": 80.750618, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 2.20461, "x": 80.8499, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1986265.0, "x": 80.722353, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 2026186.0, "x": 80.719367, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.624734, "x": 80.820604, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.096017, "x": 80.738328, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.737434, "x": 80.776054, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.346231, "x": 80.726016, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.53127, "x": 80.793076, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.609279, "x": 80.833454, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.665416, "x": 80.808216, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.07726, "x": 80.735113, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.224946, "x": 80.737719, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 0.990866, "x": 80.74543, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 2.026042, "x": 80.719161, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 2.485028, "x": 80.752082, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.928837, "x": 80.714753, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.665365, "x": 80.808199, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 2.176124, "x": 80.79861, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 2.049438, "x": 80.724416, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": 1.485053, "x": 80.752058, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.027062, "x": -79.829115, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.337386, "x": -79.468608, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.26138, "x": -79.5807, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.021637, "x": -79.847985, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.216045, "x": -79.657467, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.089798, "x": -79.769093, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.345139, "x": -79.460655, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.040155, "x": -79.998118, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.197033, "x": -79.680984, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.287916, "x": -79.546441, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.289401, "x": -79.55859, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.33777, "x": -79.468275, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.067594, "x": -79.962584, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.346509, "x": -79.459283, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.067587, "x": -79.962579, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.410435, "x": -79.432159, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.024658, "x": -79.975383, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.338032, "x": -79.468305, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.39592, "x": -79.43919, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.02968, "x": -79.986146, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.02963, "x": -79.98621, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.196406, "x": -79.681357, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.067766, "x": -79.962634, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.337363, "x": -79.468605, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.39592, "x": -79.43919, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.14217, "x": -79.36521, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.197402, "x": -79.680735, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.396026, "x": -79.439238, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.11494, "x": -79.40514, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.218553, "x": -79.653839, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.337509, "x": -79.468549, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.164833, "x": -79.714833, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.218668, "x": -79.653569, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.261545, "x": -79.582817, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.064643, "x": -79.975524, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.218553, "x": -79.653839, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.009013, "x": -79.939941, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.009095, "x": -79.9399, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.06485, "x": -79.975044, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.04035, "x": -79.57454, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.027261, "x": -79.979439, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.011876, "x": -79.918196, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.064696, "x": -79.975569, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.026823, "x": -79.977879, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.06754, "x": -79.962769, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.064643, "x": -79.975524, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.078038, "x": -79.954219, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.04409, "x": -79.57151, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -2.106603, "x": -79.958174, "poliducto": "LIBERTAD-PASCUALES" },
+            { "y": -0.008128, "x": -79.391097, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.008128, "x": -79.391097, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.731046, "x": -79.57832, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.130862, "x": -79.253704, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.166146, "x": -79.224218, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.25252, "x": -79.12924, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.252387, "x": -79.129483, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.105351, "x": -79.292834, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.008251, "x": -79.390644, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.010442, "x": -79.405121, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.257189, "x": -79.456177, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.257189, "x": -79.456177, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.162331, "x": -79.226578, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.076875, "x": -79.32856, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.107874, "x": -79.420847, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.280247, "x": -79.071777, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.280247, "x": -79.071777, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.251332, "x": -79.132443, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.251332, "x": -79.132443, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.289277, "x": -79.063294, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.07683, "x": -79.328594, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.53815, "x": -79.562335, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.00979, "x": -79.404994, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.313009, "x": -78.964515, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.205332, "x": -79.193372, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.205332, "x": -79.193372, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.242009, "x": -79.452398, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.042631, "x": -79.413258, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.08878, "x": -79.4205, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.009823, "x": -79.404968, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.14624, "x": -79.42482, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.627372, "x": -79.554809, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.12271, "x": -79.26766, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.91851, "x": -79.67789, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.386936, "x": -79.515178, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.252837, "x": -79.12934, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.231144, "x": -79.156409, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.016312, "x": -79.406348, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.008744, "x": -79.404783, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.314371, "x": -79.469687, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.257278, "x": -79.456208, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.257278, "x": -79.456208, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.304432, "x": -78.913308, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.20022, "x": -79.07176, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.626833, "x": -79.554896, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.501961, "x": -79.545518, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.23529, "x": -79.150898, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.08994, "x": -79.420906, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.16078, "x": -79.221377, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.053913, "x": -79.414949, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.387051, "x": -79.515122, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.032226, "x": -79.40975, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.215877, "x": -79.18088, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.215877, "x": -79.18088, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.125532, "x": -79.263553, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.26678, "x": -79.459264, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.313561, "x": -78.955075, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.10108, "x": -79.29913, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.061877, "x": -79.343342, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.261209, "x": -79.457589, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.261209, "x": -79.457589, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.094395, "x": -79.421052, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.134686, "x": -79.404177, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.033283, "x": -79.368241, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.008247, "x": -79.390598, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.009778, "x": -79.4048, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.031197, "x": -79410202.0, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.261086, "x": -79.45759, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": 0.261086, "x": -79.45759, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+            { "y": -0.101101, "x": -79.299099, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.101101, "x": -79.299099, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.107611, "x": -79.420902, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.086126, "x": -79.420821, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.62684, "x": -79.554863, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.033316, "x": -79.368292, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.251372, "x": -79.132395, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.251372, "x": -79.132395, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.054052, "x": -79.414956, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.123459, "x": -79.421248, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.045014, "x": -79.414328, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.085583, "x": -79.420959, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.085583, "x": -79.420959, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.008339, "x": -79.390571, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.166201, "x": -79.224157, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.044072, "x": -79.413866, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.231132, "x": -79.15644, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.213707, "x": -79.175134, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.016285, "x": -79.406351, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.278563, "x": -79.074025, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.300008, "x": -78.886483, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.312927, "x": -78.953848, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.044224, "x": -79.413824, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.009282, "x": -79.40483, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.13999, "x": -79.42287, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.253406, "x": -79.133843, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.032936, "x": -79.368432, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.054075, "x": -79.414938, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.849092, "x": -79.62504, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.215993, "x": -79.180931, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.215993, "x": -79.180931, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.16623, "x": -79.224207, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.001132, "x": -79.400653, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.075113, "x": -79.418719, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.14624, "x": -79.42489, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.714195, "x": -79.556437, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.243277, "x": -79.452708, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.261033, "x": -79.457465, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.215799, "x": -79.180981, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.215799, "x": -79.180981, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.000315, "x": -79.400328, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.16619, "x": -79.224277, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.204154, "x": -79.194736, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.031447, "x": -79.410063, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.065922, "x": -79.416159, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.045081, "x": -79.414337, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.626923, "x": -79.554918, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.138455, "x": -79.422617, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.296128, "x": -78.866587, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.292003, "x": -78.676963, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": -0.313115, "x": -78.953604, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+             { "y": 0.19836594, "x": 77.7038724, "poliducto": "ESMERALDAS-SANTO DOMINGO-QUITO" },
+              { y: 0.016312, x: -79.406348, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.008744, x: -79.404783, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.314371, x: -79.469687, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.257278, x: -79.456208, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: -0.304432, x: -78.913308, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.20022, x: -79.07176, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.626833, x: -79.554896, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.501961, x: -79.545518, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: -0.23529, x: -79.150898, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.08994, x: -79.420906, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: -0.16078, x: -79.221377, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.053913, x: -79.414949, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.387051, x: -79.515122, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.032226, x: -79.40975, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: -0.215877, x: -79.18088, "poliducto": "SHUSHUFINDI-QUITO" }, { y: -0.125532, x: -79.263553, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.26678, x: -79.459264, "poliducto": "SHUSHUFINDI-QUITO" }, { y: -0.313561, x: -78.955075, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: -0.10108, x: -79.29913, "poliducto": "SHUSHUFINDI-QUITO" }, { y: -0.061877, x: -79.343342, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.261209, x: -79.457589, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.094395, x: -79.421052, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.134686, x: -79.404177, "poliducto": "SHUSHUFINDI-QUITO" }, { y: -0.033283, x: -79.368241, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: -0.008247, x: -79.390598, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.009778, x: -79.4048, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.261086, x: -79.45759, "poliducto": "SHUSHUFINDI-QUITO" }, { y: -0.101101, x: -79.299099, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.107611, x: -79.420902, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.086126, x: -79.420821, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.62684, x: -79.554863, "poliducto": "SHUSHUFINDI-QUITO" }, { y: -0.033316, x: -79.368292, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: -0.251372, x: -79.132395, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.054052, x: -79.414956, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.123459, x: -79.421248, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.045014, x: -79.414328, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.085583, x: -79.420959, "poliducto": "SHUSHUFINDI-QUITO" }, { y: -0.008339, x: -79.390571, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: -0.166201, x: -79.224157, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.044072, x: -79.413866, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: -0.231132, x: -79.15644, "poliducto": "SHUSHUFINDI-QUITO" }, { y: -0.213707, x: -79.175134, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.016285, x: -79.406351, "poliducto": "SHUSHUFINDI-QUITO" }, { y: -0.278563, x: -79.074025, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: -0.300008, x: -78.886483, "poliducto": "SHUSHUFINDI-QUITO" }, { y: -0.312927, x: -78.953848, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.044224, x: -79.413824, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.009282, x: -79.40483, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.13999, x: -79.42287, "poliducto": "SHUSHUFINDI-QUITO" }, { y: -0.253406, x: -79.133843, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: -0.032936, x: -79.368432, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.054075, x: -79.414938, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.849092, x: -79.62504, "poliducto": "SHUSHUFINDI-QUITO" }, { y: -0.215993, x: -79.180931, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: -0.16623, x: -79.224207, "poliducto": "SHUSHUFINDI-QUITO" }, { y: -0.001132, x: -79.400653, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.075113, x: -79.418719, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.14624, x: -79.42489, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.714195, x: -79.556437, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.243277, x: -79.452708, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.261033, x: -79.457465, "poliducto": "SHUSHUFINDI-QUITO" }, { y: -0.215799, x: -79.180981, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: -0.000315, x: -79.400328, "poliducto": "SHUSHUFINDI-QUITO" }, { y: -0.16619, x: -79.224277, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: -0.204154, x: -79.194736, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.031447, x: -79.410063, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.065922, x: -79.416159, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.045081, x: -79.414337, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: 0.626923, x: -79.554918, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.138455, x: -79.422617, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: -0.296128, x: -78.866587, "poliducto": "SHUSHUFINDI-QUITO" }, { y: -0.292003, x: -78.676963, "poliducto": "SHUSHUFINDI-QUITO" },
+              { y: -0.313115, x: -78.953604, "poliducto": "SHUSHUFINDI-QUITO" }, { y: 0.19836594, x: -77.7038724, "poliducto": "SHUSHUFINDI-QUITO" }
+            ];
+            
+            coordinatesData.forEach(coord => {
+                let lat = parseFloat(coord.y);
+                let lon = parseFloat(coord.x);
+                
+                // Correction for Ecuador's geographical position (negative values)
+                if (lat > 0) lat = -lat;
+                if (lon > 0) lon = -lon;
+
+                // Further correction for values that might still be out of range
+                if (lon < -180) lon = lon / 1000000;
+                if (lat < -90) lat = lat / 1000000;
+
+                if (lat >= -5 && lat <= 2 && lon >= -81.5 && lon <= -75) {
+                    const markerColor = colors.poliducto[coord.poliducto.trim()] || colors.poliducto.DEFAULT;
+                    L.circleMarker([lat, lon], {
+                        radius: 5,
+                        fillColor: markerColor,
+                        color: "#000",
+                        weight: 0.5,
+                        opacity: 1,
+                        fillOpacity: 0.9
+                    }).addTo(mapa).bindPopup(`<b>${coord.poliducto}</b><br>Lat: ${lat.toFixed(4)}<br>Lon: ${lon.toFixed(4)}`);
+                }
+            });
+            
+             // Legend
+            const legend = L.control({position: 'bottomright'});
+            legend.onAdd = function (map) {
+                const div = L.DomUtil.create('div', 'map-legend');
+                const poliductos = Object.keys(colors.poliducto);
+                div.innerHTML += '<h4>Poliducto</h4>';
+                poliductos.forEach(p => {
+                    if (p !== "DEFAULT") {
+                        div.innerHTML += `<i style="background:${colors.poliducto[p]}"></i> ${p}<br>`;
+                    }
+                });
+                return div;
+            };
+            legend.addTo(mapa);
+            
+            const createBarChart = (ctx, label, data2024, data2025, percentageChange) => {
+                const color = percentageChange >= 0 ? colors.green : colors.red;
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: [label],
+                        datasets: [ { label: '2024', data: [data2024], backgroundColor: colors.blue4, borderWidth: 1 }, { label: '2025', data: [data2025], backgroundColor: colors.blue2, borderWidth: 1 } ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, ...tooltipCallback, plugins: { ...tooltipCallback.plugins, legend: { display:true }, title: { display: true, text: `${label} (${percentageChange > 0 ? '+' : ''}${percentageChange.toFixed(1)}%)`, color: color } } }
+                });
+            };
+            
+            createBarChart(document.getElementById('detenidosChart').getContext('2d'), 'Detenidos', 232, 233, 0.4);
+            createBarChart(document.getElementById('organizacionesChart').getContext('2d'), 'Organizaciones Delictivas', 27, 22, -18.5);
+            createBarChart(document.getElementById('carrosChart').getContext('2d'), 'Carros Retenidos', 181, 227, 25.4);
+            createBarChart(document.getElementById('casosChart').getContext('2d'), 'Casos Realizados', 202, 248, 23.4);
+            createBarChart(document.getElementById('combustibleChart').getContext('2d'), 'Combustible (Galones)', 366887, 629744, 71.6);
+            createBarChart(document.getElementById('glpChart').getContext('2d'), 'GLP 15kg (Cilindros)', 918, 1987, 116.4);
+            
+            new Chart(document.getElementById('poliductosChart2025').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: [ wrapLabel('LIBERTAD-MANTA', 16), wrapLabel('LIBERTAD-PASCUALES', 16), wrapLabel('ESMERALDAS-SANTO DOMINGO', 16), wrapLabel('PASCUALES-CUENCA', 16), wrapLabel('QUITO-AMBATO-RIOBAMBA', 16), wrapLabel('SHUSHUFINDI-QUITO', 16), wrapLabel('STO. DOMINGO-EL BEATERIO', 16)],
+                    datasets: [{ label: 'Perforaciones (Ene-May 2025)', data: [135, 111, 111, 61, 21, 20, 15], backgroundColor: colors.blue2, borderColor: colors.blue1, borderWidth: 1 }]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, ...tooltipCallback, scales: { x: { title: { display: true, text: 'Cantidad de Perforaciones' } } }, plugins: { ...tooltipCallback.plugins, legend: { display: false } } }
+            });
+
+            new Chart(document.getElementById('personalChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Personal Total'],
+                    datasets: [ { label: 'Real', data: [61], backgroundColor: colors.red }, { label: 'Ideal', data: [124], backgroundColor: colors.blue4 } ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, ...tooltipCallback, scales: { y: { beginAtZero: true, stacked: false, title: {display: true, text: 'Número de Agentes'} } } }
+            });
+
+            new Chart(document.getElementById('logisticaChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Vehículos', 'Motocicletas'],
+                    datasets: [ { label: 'Real', data: [12, 10], backgroundColor: colors.red }, { label: 'Ideal', data: [40, 20], backgroundColor: colors.blue4 } ]
+                },
+                 options: { responsive: true, maintainAspectRatio: false, ...tooltipCallback, scales: { y: { beginAtZero: true, stacked: false, title: {display: true, text: 'Cantidad de Unidades'} } } }
+            });
+        });
+    </script>
+</body>
+</html>
